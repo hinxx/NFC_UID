@@ -53,6 +53,35 @@ class NFC_UID:
             return parse_version(latest_version) > parse_version(self.__version)
         except (requests.RequestException, KeyError):
             return False
+
+    def _wait_for_card_removal(self, current_uid, connectTimeout=1, cooldown=0.2):
+        """
+        Blocks until the current card is removed.
+        A different UID is treated as a new presentation and released for the next loop.
+        """
+        while self.loop:
+            try:
+                getuid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
+                act = AnyCardType()
+                cr = CardRequest(timeout=connectTimeout, cardType=act)
+                cs = cr.waitforcard()
+                cs.connection.connect()
+                data, sw1, sw2 = cs.connection.transmit(getuid)
+                data = toHexString(data).replace(" ", "")
+
+                if data != current_uid:
+                    self.last_chip = ""
+                    return
+
+                time.sleep(cooldown)
+            except CardRequestTimeoutException:
+                self.last_chip = ""
+                return
+            except Exception as x:
+                if self.logging:
+                    print(f"Error while waiting for card removal: {x}")
+                time.sleep(cooldown)
+
     def read(self, output=True, keyboardType=False, connectTimeout=120, maxRetrys=8, cooldown=2):
         """
         Returns UID of NFC Chip/Card
@@ -75,7 +104,7 @@ class NFC_UID:
                 data, sw1, sw2 = cs.connection.transmit(getuid)
                 data = toHexString(data)
                 data = data.replace(" ", "")
-                if data and data != self.last_chip or True:
+                if data and (not keyboardType or data != self.last_chip):
                     self.last_chip = data
                     if output:
                         print(f"Success in reading chip..\nUID: {data}")
@@ -85,9 +114,11 @@ class NFC_UID:
                         Keyboard.write(f"{data}")
                     else:
                         return data
-                    break
+                    return data
                 cs = None
             except CardRequestTimeoutException:
+                if keyboardType:
+                    self.last_chip = ""
                 if self.logging:
                     print("Connection timed out... New request starting")
             except Exception as x:
@@ -120,7 +151,7 @@ class NFC_UID:
                 data, sw1, sw2 = cs.connection.transmit(getuid)
                 data = toHexString(data)
                 data = data.replace(" ", "")
-                if data and data != self.last_chip or True:
+                if data and (not keyboard_output or data != self.last_chip):
                     self.last_chip = data
                     if output:
                         print(f"Success in reading chip..\nUID: {data}")
@@ -131,9 +162,11 @@ class NFC_UID:
                     else:
                         return data
                     time.sleep(set_cooldown)
-                    break
+                    return data
                 cs=None
             except CardRequestTimeoutException:
+                if keyboard_output:
+                    self.last_chip = ""
                 if debug:
                     print("Connection timed out... New request starting")
             except Exception as x:
@@ -151,7 +184,15 @@ class NFC_UID:
         retryCooldown -> def 2             | Sets timeout in seconds for read retry
         """
         while self.loop:
-            self.read(output=output, keyboardType=keyboardType, connectTimeout=connectTimeout, maxRetrys=maxRetrys, cooldown=cooldown)
+            data = self.read(
+                output=output,
+                keyboardType=keyboardType,
+                connectTimeout=connectTimeout,
+                maxRetrys=maxRetrys,
+                cooldown=cooldown,
+            )
+            if keyboardType and data:
+                self._wait_for_card_removal(data)
 
 if __name__ == "__main__":
     reader = NFC_UID()
