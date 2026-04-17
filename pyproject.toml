@@ -1,6 +1,32 @@
 [build-system]
-requires=['keyboard>=0.13.5',
-            'pyscard>=2.0.2',
-            'setuptools'
-]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "nfc_uid"
+version = "0.6"
+description = "Get UUID of NFC card with a scanner."
+readme = "README.md"
+requires-python = ">=3.7"
+authors = [{ name = "Zero Codes" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Programming Language :: Python :: 3.7",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+]
+dependencies = [
+    "keyboard>=0.13.5",
+    "pyscard>=2.0.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/hinxx/NFC_UID"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["nfc_uid*"]

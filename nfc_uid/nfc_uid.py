@@ -1,5 +1,4 @@
 import time
-from packaging.version import parse as parse_version
 import os
 try:
     from smartcard.CardType import AnyCardType
@@ -9,17 +8,11 @@ try:
 except ImportError:
     os.system('python -m pip install pyscard')
 try:
-    import requests
-except ImportError:
-    os.system('python -m pip install requests')
-    os.system('python -m pip install urllib3==1.26.15')
-try:
     import keyboard as Keyboard
 except ImportError:
     os.system('python -m pip install keyboard')
 try:
-    import keyboard as Keyboard  
-    import requests
+    import keyboard as Keyboard
     from smartcard.CardType import AnyCardType
     from smartcard.CardRequest import CardRequest
     from smartcard.Exceptions import CardRequestTimeoutException
@@ -29,30 +22,13 @@ except Exception as x:
     os._exit(1)
     
 class NFC_UID:
-    __version = "0.5"
-    __name="nfc-uid"
-    pypi_version="0.5"
+    __version = "0.6"
     logging = True
     last_chip = ""
     loop = True
 
     def __init__(self, logging=True):
         self.logging=logging
-        if self.__is_pypi_version_newer() and self.logging:
-            if self.pypi_version!=None:
-                print(f"Update is available! You have [{self.__version}] but should have [{self.pypi_version}]")
-            else:
-                print("Update is available")
-    def __is_pypi_version_newer(self):
-        try:
-            response = requests.get(f"https://pypi.org/pypi/{self.__name}/json")
-            response.raise_for_status()
-            data = response.json()
-            latest_version = data["info"]["version"]
-            self.pypi_version = latest_version
-            return parse_version(latest_version) > parse_version(self.__version)
-        except (requests.RequestException, KeyError):
-            return False
 
     def _wait_for_card_removal(self, current_uid, connectTimeout=1, cooldown=0.2):
         """

@@ -1,11 +1,6 @@
 # NFC_UID
 Get the UID / MAC / HWID of an NFC chip / Card<br>
-Version: 0.4
-
-## Navigation
-- <a href="\docs\installation.md">Installation</a>
-- <a href="\docs\changelog.md">Changelogs</a>
-- <a href="\docs\migration.md">Migrating to 0.5</a>
+Version: 0.6
 
 ## Disclaimer
     I do not promise to maintain this project or to update it frequently!
@@ -23,15 +18,9 @@ Version: 0.4
     Anyways have fun with it and if you copy it I would be happy to get a mention ^^.
     I do not want the project to be abused for private/payed src so we will use GNU v3 from now on 
 
-## Ideas
-    Console usage (With argument parsing)
-    Add optional logger for file output
-
 
 ## Tested Hard/Software
-    While coding this software I only used the following Scanner, OS and python Version.
-    I do not gurantee that code works as intended if you change any parameter
 
-    Tested Scanner: ACR1252
+    Tested Scanner: ACR122
     Tested OS     : Windows 10
-    Python        : 3.7
+    Python        : 3.13
