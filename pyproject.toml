@@ -28,6 +28,14 @@ Homepage = "https://github.com/hinxx/NFC_UID"
 [project.scripts]
 nfc-uid = "nfc_uid.nfc_uid:main"
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+windows-build = [
+    "pyinstaller>=6.0",
+]
+
 [tool.setuptools]
 include-package-data = true
 
