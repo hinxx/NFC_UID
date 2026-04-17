@@ -13,9 +13,9 @@ except ImportError:
     toHexString = None
 
 try:
-    import keyboard as Keyboard
+    import keyboard as keyboard_module
 except ImportError:
-    Keyboard = None
+    keyboard_module = None
 
 
 class NFC_UID:
@@ -32,12 +32,12 @@ class NFC_UID:
             raise RuntimeError(
                 "Missing dependency: pyscard. Install it with 'pip install pyscard'."
             )
-        if keyboard_required and Keyboard is None:
+        if keyboard_required and keyboard_module is None:
             raise RuntimeError(
                 "Missing dependency: keyboard. Install it with 'pip install keyboard'."
             )
 
-    def _wait_for_card_removal(self, current_uid, connectTimeout=1, cooldown=0.2):
+    def _wait_for_card_removal(self, current_uid, connect_timeout=1, cooldown=0.2):
         """
         Blocks until the current card is removed.
         A different UID is treated as a new presentation and released for the next loop.
@@ -45,12 +45,12 @@ class NFC_UID:
         self._ensure_dependencies()
         while self.loop:
             try:
-                getuid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
+                get_uid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
                 act = AnyCardType()
-                cr = CardRequest(timeout=connectTimeout, cardType=act)
-                cs = cr.waitforcard()
-                cs.connection.connect()
-                data, sw1, sw2 = cs.connection.transmit(getuid)
+                card_request = CardRequest(timeout=connect_timeout, cardType=act)
+                card_service = card_request.waitforcard()
+                card_service.connection.connect()
+                data, sw1, sw2 = card_service.connection.transmit(get_uid)
                 data = toHexString(data).replace(" ", "")
 
                 if data != current_uid:
@@ -66,43 +66,50 @@ class NFC_UID:
                     print(f"Error while waiting for card removal: {x}")
                 time.sleep(cooldown)
 
-    def read(self, output=True, keyboardType=False, connectTimeout=120, maxRetrys=8, cooldown=2):
+    def read(
+        self,
+        output=True,
+        keyboard_type=False,
+        connect_timeout=120,
+        max_retries=8,
+        cooldown=2,
+    ):
         """
         Returns UID of NFC Chip/Card
         Set ouput to False if no print/output is required default is True
         output -> def = True               | Output for success/feedback etc. will be enabled
-        connectTimeout -> def = 120/2min   | Sets timeout in seconds. Timeout for scan card.
-        maxRetrys -> def 8                 | Sets maximum read trys befor break. Set to None for infinite
-        retryCooldown -> def 2             | Sets timeout in seconds for read retry
+        connect_timeout -> def = 120/2min  | Sets timeout in seconds. Timeout for scan card.
+        max_retries -> def 8               | Sets maximum read trys befor break. Set to None for infinite
+        cooldown -> def 2                 | Sets timeout in seconds for read retry
         """
-        self._ensure_dependencies(keyboard_required=keyboardType)
+        self._ensure_dependencies(keyboard_required=keyboard_type)
         counter = 0
-        while maxRetrys==None or counter<maxRetrys:
+        while max_retries==None or counter<max_retries:
             try:
                 if output:
                     print("Waiting for NFC-Card..")
-                getuid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
+                get_uid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
                 act = AnyCardType()
-                cr = CardRequest(timeout=connectTimeout, cardType=act)
-                cs = cr.waitforcard()
-                cs.connection.connect()
-                data, sw1, sw2 = cs.connection.transmit(getuid)
+                card_request = CardRequest(timeout=connect_timeout, cardType=act)
+                card_service = card_request.waitforcard()
+                card_service.connection.connect()
+                data, sw1, sw2 = card_service.connection.transmit(get_uid)
                 data = toHexString(data)
                 data = data.replace(" ", "")
-                if data and (not keyboardType or data != self.last_chip):
+                if data and (not keyboard_type or data != self.last_chip):
                     self.last_chip = data
                     if output:
                         print(f"Success in reading chip..\nUID: {data}")
-                    if keyboardType:
+                    if keyboard_type:
                         if self.logging:
                             print("Output send to keyboard")
-                        Keyboard.write(f"{data}")
+                        keyboard_module.write(f"{data}")
                     else:
                         return data
                     return data
-                cs = None
+                card_service = None
             except CardRequestTimeoutException:
-                if keyboardType:
+                if keyboard_type:
                     self.last_chip = ""
                 if self.logging:
                     print("Connection timed out... New request starting")
@@ -129,12 +136,12 @@ class NFC_UID:
             try:
                 if output:
                     print("Waiting for Card..")
-                getuid=[0xFF, 0xCA, 0x00, 0x00, 0x00]
+                get_uid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
                 act = AnyCardType()
-                cr = CardRequest( timeout=set_timeout, cardType=act )
-                cs = cr.waitforcard()
-                cs.connection.connect()
-                data, sw1, sw2 = cs.connection.transmit(getuid)
+                card_request = CardRequest(timeout=set_timeout, cardType=act)
+                card_service = card_request.waitforcard()
+                card_service.connection.connect()
+                data, sw1, sw2 = card_service.connection.transmit(get_uid)
                 data = toHexString(data)
                 data = data.replace(" ", "")
                 if data and (not keyboard_output or data != self.last_chip):
@@ -144,12 +151,12 @@ class NFC_UID:
                     if keyboard_output:
                         if debug:
                             print("Output send to keyboard")
-                        Keyboard.write(f"{data}")
+                        keyboard_module.write(f"{data}")
                     else:
                         return data
                     time.sleep(set_cooldown)
                     return data
-                cs=None
+                card_service = None
             except CardRequestTimeoutException:
                 if keyboard_output:
                     self.last_chip = ""
@@ -159,26 +166,34 @@ class NFC_UID:
                 if debug:
                     print(f"Error: {x}")
 
-    def looped_read(self, output=True, keyboardType=False, connectTimeout=120, maxRetrys=8, cooldown=2):
+    def looped_read(
+        self,
+        output=True,
+        keyboard_type=False,
+        connect_timeout=120,
+        max_retries=8,
+        cooldown=2,
+    ):
         """
         While loop for NFC_UID.read
         Will be looped until Enviroment.__loop__ is False
         USE WITH THREAD ONLY!
         output -> def = True               | Output for success/feedback etc. will be enabled
-        connectTimeout -> def = 120/2min   | Sets timeout in seconds. Timeout for scan card.
-        maxRetrys -> def 8                 | Sets maximum read trys befor break. Set to None for infinite
-        retryCooldown -> def 2             | Sets timeout in seconds for read retry
+        connect_timeout -> def = 120/2min  | Sets timeout in seconds. Timeout for scan card.
+        max_retries -> def 8               | Sets maximum read trys befor break. Set to None for infinite
+        cooldown -> def 2                 | Sets timeout in seconds for read retry
         """
         while self.loop:
             data = self.read(
                 output=output,
-                keyboardType=keyboardType,
-                connectTimeout=connectTimeout,
-                maxRetrys=maxRetrys,
+                keyboard_type=keyboard_type,
+                connect_timeout=connect_timeout,
+                max_retries=max_retries,
                 cooldown=cooldown,
             )
-            if keyboardType and data:
+            if keyboard_type and data:
                 self._wait_for_card_removal(data)
+
 
 def build_parser():
     parser = argparse.ArgumentParser(
@@ -231,9 +246,9 @@ def main(argv=None):
         if args.mode == "read":
             uid = reader.read(
                 output=not args.quiet,
-                keyboardType=False,
-                connectTimeout=args.timeout,
-                maxRetrys=retries,
+                keyboard_type=False,
+                connect_timeout=args.timeout,
+                max_retries=retries,
                 cooldown=args.cooldown,
             )
             if args.quiet and uid:
@@ -242,9 +257,9 @@ def main(argv=None):
             while True:
                 uid = reader.read(
                     output=not args.quiet,
-                    keyboardType=False,
-                    connectTimeout=args.timeout,
-                    maxRetrys=retries,
+                    keyboard_type=False,
+                    connect_timeout=args.timeout,
+                    max_retries=retries,
                     cooldown=args.cooldown,
                 )
                 if args.quiet and uid:
@@ -252,17 +267,17 @@ def main(argv=None):
         elif args.mode == "keyboard":
             reader.read(
                 output=not args.quiet,
-                keyboardType=True,
-                connectTimeout=args.timeout,
-                maxRetrys=retries,
+                keyboard_type=True,
+                connect_timeout=args.timeout,
+                max_retries=retries,
                 cooldown=args.cooldown,
             )
         else:
             reader.looped_read(
                 output=not args.quiet,
-                keyboardType=True,
-                connectTimeout=args.timeout,
-                maxRetrys=retries,
+                keyboard_type=True,
+                connect_timeout=args.timeout,
+                max_retries=retries,
                 cooldown=args.cooldown,
             )
     except KeyboardInterrupt:
