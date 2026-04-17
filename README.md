@@ -137,6 +137,11 @@ CLI options:
 - `--quiet`: suppress reader status messages
 - `--no-logging`: disable internal logging messages
 
+Stopping the CLI:
+
+- Press `Ctrl+C` to stop any console mode cleanly.
+- On Windows, the reader wait is polled in short intervals so `Ctrl+C` should exit promptly instead of waiting for the full `--timeout` value.
+
 ## Windows EXE
 
 The Windows build produces two executables:
@@ -151,6 +156,7 @@ See [windows/WINDOWS.md](windows/WINDOWS.md) for Windows build and startup instr
 - The old camelCase argument names have been removed. Use snake_case names such as `keyboard_type`, `connect_timeout`, and `max_retries`.
 - `nfc_reader()` is still present for backward compatibility inside the codebase, but it is deprecated.
 - If `pyscard` or `keyboard` is missing, the package raises a runtime error with the install command instead of trying to install packages automatically.
+- `Ctrl+C` only applies to console runs such as `python -m nfc_uid ...` or `nfc-uid-console.exe`. The no-console Windows build cannot receive `Ctrl+C`.
 
 ## License
 

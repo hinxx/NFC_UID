@@ -45,6 +45,9 @@ Run keyboard loop mode:
 .\.venv\Scripts\python.exe -m nfc_uid keyboard-loop
 ```
 
+Stop a console run with `Ctrl+C`.
+On Windows, the app now checks for interruption in short intervals, so it should exit quickly even if `--timeout` is large.
+
 ## 6. Build Windows Executables
 
 Install the build tools:
@@ -76,6 +79,9 @@ Use:
 
 - `dist\nfc-uid-console.exe` for debugging with a visible console window
 - `dist\nfc-uid.exe` for normal use or Windows startup without a console window
+
+If you need to stop the app manually from a terminal, use `dist\nfc-uid-console.exe`.
+`Ctrl+C` does not apply to `dist\nfc-uid.exe` because that build has no console window.
 
 ## 7. Start at Windows Login in `keyboard-loop` Mode
 
