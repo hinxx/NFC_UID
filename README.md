@@ -2,7 +2,7 @@
 
 Read the UID of an NFC card or tag with `pyscard`.
 
-Current version: `0.6`
+Current version: `0.7`
 
 ## Features
 

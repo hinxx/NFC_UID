@@ -19,7 +19,7 @@ except ImportError:
 
 
 class NFC_UID:
-    __version = "0.6"
+    __version = "0.7"
     logging = True
     last_chip = ""
     loop = True
