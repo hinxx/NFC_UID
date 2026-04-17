@@ -1,26 +1,23 @@
+import argparse
 import time
-import os
+
 try:
     from smartcard.CardType import AnyCardType
     from smartcard.CardRequest import CardRequest
     from smartcard.Exceptions import CardRequestTimeoutException
     from smartcard.util import toHexString
 except ImportError:
-    os.system('python -m pip install pyscard')
+    AnyCardType = None
+    CardRequest = None
+    CardRequestTimeoutException = None
+    toHexString = None
+
 try:
     import keyboard as Keyboard
 except ImportError:
-    os.system('python -m pip install keyboard')
-try:
-    import keyboard as Keyboard
-    from smartcard.CardType import AnyCardType
-    from smartcard.CardRequest import CardRequest
-    from smartcard.Exceptions import CardRequestTimeoutException
-    from smartcard.util import toHexString
-except Exception as x:
-    print(f"FATAL ERROR: We could not load all required libary's! -> {x}")
-    os._exit(1)
-    
+    Keyboard = None
+
+
 class NFC_UID:
     __version = "0.6"
     logging = True
@@ -30,11 +27,22 @@ class NFC_UID:
     def __init__(self, logging=True):
         self.logging=logging
 
+    def _ensure_dependencies(self, keyboard_required=False):
+        if AnyCardType is None or CardRequest is None or toHexString is None:
+            raise RuntimeError(
+                "Missing dependency: pyscard. Install it with 'pip install pyscard'."
+            )
+        if keyboard_required and Keyboard is None:
+            raise RuntimeError(
+                "Missing dependency: keyboard. Install it with 'pip install keyboard'."
+            )
+
     def _wait_for_card_removal(self, current_uid, connectTimeout=1, cooldown=0.2):
         """
         Blocks until the current card is removed.
         A different UID is treated as a new presentation and released for the next loop.
         """
+        self._ensure_dependencies()
         while self.loop:
             try:
                 getuid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
@@ -67,6 +75,7 @@ class NFC_UID:
         maxRetrys -> def 8                 | Sets maximum read trys befor break. Set to None for infinite
         retryCooldown -> def 2             | Sets timeout in seconds for read retry
         """
+        self._ensure_dependencies(keyboard_required=keyboardType)
         counter = 0
         while maxRetrys==None or counter<maxRetrys:
             try:
@@ -114,6 +123,7 @@ class NFC_UID:
         """
         if self.logging:
             print("Function nfc_read is depricated! Please change to read")
+        self._ensure_dependencies(keyboard_required=keyboard_output)
 
         while True:
             try:
@@ -170,6 +180,102 @@ class NFC_UID:
             if keyboardType and data:
                 self._wait_for_card_removal(data)
 
+def build_parser():
+    parser = argparse.ArgumentParser(
+        description="Read NFC UIDs once, continuously, or via keyboard emulation.",
+    )
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        default="read",
+        choices=["read", "loop", "keyboard", "keyboard-loop"],
+        help="Execution mode. Default: read.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=120,
+        help="Card detection timeout in seconds. Default: 120.",
+    )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=8,
+        help="Maximum read retries. Use -1 for infinite retries. Default: 8.",
+    )
+    parser.add_argument(
+        "--cooldown",
+        type=float,
+        default=2,
+        help="Delay between retry attempts in seconds. Default: 2.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress status output from the reader.",
+    )
+    parser.add_argument(
+        "--no-logging",
+        action="store_true",
+        help="Disable internal logging messages.",
+    )
+    return parser
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    retries = None if args.retries < 0 else args.retries
+    reader = NFC_UID(logging=not args.no_logging)
+
+    try:
+        if args.mode == "read":
+            uid = reader.read(
+                output=not args.quiet,
+                keyboardType=False,
+                connectTimeout=args.timeout,
+                maxRetrys=retries,
+                cooldown=args.cooldown,
+            )
+            if args.quiet and uid:
+                print(uid)
+        elif args.mode == "loop":
+            while True:
+                uid = reader.read(
+                    output=not args.quiet,
+                    keyboardType=False,
+                    connectTimeout=args.timeout,
+                    maxRetrys=retries,
+                    cooldown=args.cooldown,
+                )
+                if args.quiet and uid:
+                    print(uid)
+        elif args.mode == "keyboard":
+            reader.read(
+                output=not args.quiet,
+                keyboardType=True,
+                connectTimeout=args.timeout,
+                maxRetrys=retries,
+                cooldown=args.cooldown,
+            )
+        else:
+            reader.looped_read(
+                output=not args.quiet,
+                keyboardType=True,
+                connectTimeout=args.timeout,
+                maxRetrys=retries,
+                cooldown=args.cooldown,
+            )
+    except KeyboardInterrupt:
+        reader.loop = False
+        if not args.quiet:
+            print("Stopped by user.")
+        return 130
+    except RuntimeError as error:
+        print(error)
+        return 1
+
+    return 0
+
+
 if __name__ == "__main__":
-    reader = NFC_UID()
-    reader.read()
+    raise SystemExit(main())

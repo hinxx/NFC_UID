@@ -25,6 +25,9 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/hinxx/NFC_UID"
 
+[project.scripts]
+nfc-uid = "nfc_uid.nfc_uid:main"
+
 [tool.setuptools]
 include-package-data = true
 
