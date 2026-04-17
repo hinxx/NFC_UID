@@ -45,7 +45,7 @@ Run keyboard loop mode:
 .\.venv\Scripts\python.exe -m nfc_uid keyboard-loop
 ```
 
-## 6. Build a Windows Executable
+## 6. Build Windows Executables
 
 Install the build tools:
 
@@ -53,7 +53,7 @@ Install the build tools:
 .\.venv\Scripts\python.exe -m pip install -e ".[windows-build]"
 ```
 
-Build the executable:
+Build the executables:
 
 ```bat
 windows\build-windows.bat
@@ -65,8 +65,44 @@ Clean and rebuild:
 windows\build-windows.bat clean
 ```
 
-The built executable will be:
+The build creates:
 
 ```text
+dist\nfc-uid-console.exe
 dist\nfc-uid.exe
 ```
+
+Use:
+
+- `dist\nfc-uid-console.exe` for debugging with a visible console window
+- `dist\nfc-uid.exe` for normal use or Windows startup without a console window
+
+## 7. Start at Windows Login in `keyboard-loop` Mode
+
+The simplest setup is a shortcut in the current user's Startup folder.
+
+1. Build the executables first.
+2. Press `Win + R`.
+3. Run:
+
+```text
+shell:startup
+```
+
+4. In the Startup folder, create a shortcut.
+5. Set the shortcut target to the no-console executable:
+
+```text
+"C:\path\to\nfc-uid.exe" keyboard-loop --quiet --no-logging
+```
+
+6. Set `Start in` to the folder that contains `nfc-uid.exe`.
+7. Sign out and back in, or restart Windows, to test it.
+
+Recommended:
+
+- Keep the executable in a stable location such as `C:\Apps\nfc-uid\`.
+- Use `--quiet --no-logging` for startup mode so it does not print extra console output.
+- If you want a visible console for troubleshooting, remove `--quiet` first.
+
+You can also use Task Scheduler instead of the Startup folder if you want more control over delay, retries, or user session behavior.

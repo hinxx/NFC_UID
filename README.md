@@ -137,6 +137,15 @@ CLI options:
 - `--quiet`: suppress reader status messages
 - `--no-logging`: disable internal logging messages
 
+## Windows EXE
+
+The Windows build produces two executables:
+
+- `nfc-uid-console.exe`: console build for debugging
+- `nfc-uid.exe`: no-console build for normal use and startup
+
+See [windows/WINDOWS.md](windows/WINDOWS.md) for Windows build and startup instructions.
+
 ## Notes
 
 - The old camelCase argument names have been removed. Use snake_case names such as `keyboard_type`, `connect_timeout`, and `max_retries`.

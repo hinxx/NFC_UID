@@ -19,6 +19,19 @@ pushd "%ROOT%"
     --clean ^
     --noconfirm ^
     --onefile ^
+    --name nfc-uid-console ^
+    nfc_uid\__main__.py
+if errorlevel 1 (
+    set "EXITCODE=%ERRORLEVEL%"
+    popd
+    exit /b %EXITCODE%
+)
+
+"%PYTHON%" -m PyInstaller ^
+    --clean ^
+    --noconfirm ^
+    --onefile ^
+    --noconsole ^
     --name nfc-uid ^
     nfc_uid\__main__.py
 set "EXITCODE=%ERRORLEVEL%"
@@ -28,4 +41,5 @@ if not "%EXITCODE%"=="0" exit /b %EXITCODE%
 
 echo.
 echo Build complete:
+echo   dist\nfc-uid-console.exe
 echo   dist\nfc-uid.exe
