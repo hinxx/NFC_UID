@@ -32,4 +32,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nfc-uid-windows
-          path: dist/nfc-uid.exe
+          path: |
+            dist/nfc-uid.exe
+            dist/nfc-uid-console.exe
