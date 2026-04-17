@@ -25,7 +25,9 @@ class NFC_UID:
     loop = True
 
     def __init__(self, logging=True):
-        self.logging=logging
+        self.logging = logging
+        self.last_chip = ""
+        self.loop = True
 
     def _ensure_dependencies(self, keyboard_required=False):
         if AnyCardType is None or CardRequest is None or toHexString is None:
@@ -46,9 +48,7 @@ class NFC_UID:
         while self.loop:
             try:
                 get_uid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
-                act = AnyCardType()
-                card_request = CardRequest(timeout=connect_timeout, cardType=act)
-                card_service = card_request.waitforcard()
+                card_service = self._wait_for_card(connect_timeout)
                 card_service.connection.connect()
                 data, sw1, sw2 = card_service.connection.transmit(get_uid)
                 data = toHexString(data).replace(" ", "")
@@ -65,6 +65,31 @@ class NFC_UID:
                 if self.logging:
                     print(f"Error while waiting for card removal: {x}")
                 time.sleep(cooldown)
+
+    def _wait_for_card(self, connect_timeout):
+        """
+        Poll the reader in short intervals so Ctrl+C can interrupt promptly on Windows.
+        """
+        deadline = None
+        if connect_timeout is not None:
+            deadline = time.monotonic() + max(connect_timeout, 0)
+
+        while self.loop:
+            if deadline is not None and time.monotonic() >= deadline:
+                raise CardRequestTimeoutException("Timed out waiting for card")
+
+            # Keep the underlying PC/SC wait short so Ctrl+C can be processed quickly.
+            wait_timeout = 1
+
+            act = AnyCardType()
+            card_request = CardRequest(timeout=wait_timeout, cardType=act)
+            try:
+                return card_request.waitforcard()
+            except CardRequestTimeoutException:
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise
+
+        raise KeyboardInterrupt
 
     def read(
         self,
@@ -89,9 +114,7 @@ class NFC_UID:
                 if output:
                     print("Waiting for NFC-Card..")
                 get_uid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
-                act = AnyCardType()
-                card_request = CardRequest(timeout=connect_timeout, cardType=act)
-                card_service = card_request.waitforcard()
+                card_service = self._wait_for_card(connect_timeout)
                 card_service.connection.connect()
                 data, sw1, sw2 = card_service.connection.transmit(get_uid)
                 data = toHexString(data)
@@ -132,14 +155,12 @@ class NFC_UID:
             print("Function nfc_read is depricated! Please change to read")
         self._ensure_dependencies(keyboard_required=keyboard_output)
 
-        while True:
+        while self.loop:
             try:
                 if output:
                     print("Waiting for Card..")
                 get_uid = [0xFF, 0xCA, 0x00, 0x00, 0x00]
-                act = AnyCardType()
-                card_request = CardRequest(timeout=set_timeout, cardType=act)
-                card_service = card_request.waitforcard()
+                card_service = self._wait_for_card(set_timeout)
                 card_service.connection.connect()
                 data, sw1, sw2 = card_service.connection.transmit(get_uid)
                 data = toHexString(data)
@@ -254,7 +275,7 @@ def main(argv=None):
             if args.quiet and uid:
                 print(uid)
         elif args.mode == "loop":
-            while True:
+            while reader.loop:
                 uid = reader.read(
                     output=not args.quiet,
                     keyboard_type=False,
