@@ -18,16 +18,25 @@ except ImportError:
     keyboard_module = None
 
 
+try:
+    from .wedge_uid import format_uid
+except ImportError:                                  # running as a plain script
+    from wedge_uid import format_uid
+
+
 class NFC_UID:
     __version = "0.7"
     logging = True
     last_chip = ""
     loop = True
 
-    def __init__(self, logging=True):
+    def __init__(self, logging=True, uid_format="decimal"):
         self.logging = logging
         self.last_chip = ""
         self.loop = True
+        # "decimal" is what the wall units' built-in reader types. "hex" is
+        # the form the wallet stores, useful when reading a UID by eye.
+        self.uid_format = uid_format
 
     def _ensure_dependencies(self, keyboard_required=False):
         if AnyCardType is None or CardRequest is None or toHexString is None:
@@ -51,7 +60,7 @@ class NFC_UID:
                 card_service = self._wait_for_card(connect_timeout)
                 card_service.connection.connect()
                 data, sw1, sw2 = card_service.connection.transmit(get_uid)
-                data = toHexString(data).replace(" ", "")
+                data = format_uid(data, self.uid_format) if data else ""
 
                 if data != current_uid:
                     self.last_chip = ""
@@ -117,8 +126,10 @@ class NFC_UID:
                 card_service = self._wait_for_card(connect_timeout)
                 card_service.connection.connect()
                 data, sw1, sw2 = card_service.connection.transmit(get_uid)
-                data = toHexString(data)
-                data = data.replace(" ", "")
+                # Decimal by default, because that is what the wall units'
+                # built-in reader types. Formatting from the raw bytes rather
+                # than from a hex string keeps the byte order in one place.
+                data = format_uid(data, self.uid_format) if data else ""
                 if data and (not keyboard_type or data != self.last_chip):
                     self.last_chip = data
                     if output:
@@ -163,8 +174,7 @@ class NFC_UID:
                 card_service = self._wait_for_card(set_timeout)
                 card_service.connection.connect()
                 data, sw1, sw2 = card_service.connection.transmit(get_uid)
-                data = toHexString(data)
-                data = data.replace(" ", "")
+                data = format_uid(data, self.uid_format) if data else ""
                 if data and (not keyboard_output or data != self.last_chip):
                     self.last_chip = data
                     if output:
@@ -246,6 +256,15 @@ def build_parser():
         help="Delay between retry attempts in seconds. Default: 2.",
     )
     parser.add_argument(
+        "--uid-format",
+        choices=["decimal", "hex"],
+        default="decimal",
+        help=(
+            "decimal matches the wall units' built-in reader (default); "
+            "hex is the form the wallet stores."
+        ),
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress status output from the reader.",
@@ -261,7 +280,7 @@ def build_parser():
 def main(argv=None):
     args = build_parser().parse_args(argv)
     retries = None if args.retries < 0 else args.retries
-    reader = NFC_UID(logging=not args.no_logging)
+    reader = NFC_UID(logging=not args.no_logging, uid_format=args.uid_format)
 
     try:
         if args.mode == "read":
