@@ -25,7 +25,7 @@ except ImportError:                                  # running as a plain script
 
 
 class NFC_UID:
-    __version = "0.7"
+    __version = "0.8"
     logging = True
     last_chip = ""
     loop = True
