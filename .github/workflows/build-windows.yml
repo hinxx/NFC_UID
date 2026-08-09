@@ -6,6 +6,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write        # needed to attach the zip to a release
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -28,10 +31,64 @@ jobs:
       - name: Build executable
         run: windows\build-windows.bat
 
+      - name: Stage the package
+        shell: pwsh
+        run: |
+          $tag = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME } else { 'dev' }
+          $version = $tag -replace '^v', ''
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          Copy-Item dist\nfc-uid.exe          package\
+          Copy-Item dist\nfc-uid-console.exe  package\
+          Copy-Item README.md                 package\README.md
+          # A plain text note so someone who unzips this on a desk machine has
+          # the two things they need: which exe to run, and the UID format.
+          @"
+          NFC UID reader, version $version
+
+          nfc-uid-console.exe   shows what it is doing in a console window
+          nfc-uid.exe           same thing with no window, for leaving running
+
+          Typical use, typing the UID into whatever window has focus:
+
+              nfc-uid-console.exe keyboard-loop
+
+          UID format
+          ----------
+          By default the UID is typed as a decimal number, matching the
+          RFID-to-keyboard-wedge built into the wall units. That is the UID
+          bytes read least-significant-byte first:
+
+              card UID bytes   A1 B2 C3 D4
+              typed            3569595041
+
+          Use --uid-format hex to type A1B2C3D4 instead. Decimal is what the
+          wallet expects from a reader, so leave it alone unless you know you
+          want the other.
+
+          Needs an ACR122U or compatible PC/SC reader with its driver installed.
+          "@ | Out-File -Encoding utf8 package\HOW-TO-RUN.txt
+          Compress-Archive -Path package\* -DestinationPath "nfc-uid-windows-$version.zip" -Force
+          Get-ChildItem "nfc-uid-windows-$version.zip"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: nfc-uid-windows
-          path: |
-            dist/nfc-uid.exe
-            dist/nfc-uid-console.exe
+          path: nfc-uid-windows-*.zip
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: nfc-uid-windows-*.zip
+          generate_release_notes: true
+          body: |
+            Windows build of the NFC UID reader.
+
+            Download the zip, unpack it anywhere, and run
+            `nfc-uid-console.exe keyboard-loop`. No installation and no admin
+            rights needed; an ACR122U or compatible PC/SC reader with its
+            driver is required.
+
+            UIDs are typed as decimal by default, matching the reader built
+            into the wall units. See HOW-TO-RUN.txt in the zip.
